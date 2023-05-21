@@ -29,6 +29,9 @@ def get_stats(RECORDING_DURATION=5):
     print(f"Frame height: {height} px")
     print(f"Frame width: {width} px")
 
+    capture.release()
+    cv2.destroyAllWindows()
+
 
 def get_last_X_minutes(buffer, minutes, FPS):
     # Calculate the number of frames to retrieve (5 minutes worth at 26 FPS)

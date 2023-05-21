@@ -7,10 +7,10 @@ import threading
 import helpers
 
 # Define constants
-FRAME_RATE = 26  # frames per second
+FRAME_RATE = 29  # frames per second
 waitTime = int(1000 / FRAME_RATE)
-FRAME_SIZE = (1920, 1080)  # video frame size
-BUFFER_SIZE = 26 * 60 * 3  # number of frames to keep in buffer (3 minute)
+FRAME_SIZE = (640, 480)  # video frame size
+BUFFER_SIZE = FRAME_RATE * 60 * 3  # number of frames to keep in buffer (3 minute)
 
 # Initialize circular buffer
 frame_buffer = []
@@ -25,21 +25,24 @@ capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
 
 # Initialize flag variable
 is_recording = True
+stop_recording = False
 
 
 def record():
-    frame_count = 0
     global frame_buffer
     global buffer_idx
     global is_recording
+    global stop_recording
 
     # Loop through frames
-    while is_recording:
+    while is_recording and not stop_recording:
+        # print("Recording...")
         # Capture frame from camera
         ret, frame = capture.read()
 
         # Check if frame was captured successfully
         if not ret:
+            print("Cannot open camera!")
             break
 
         # Add frame to buffer
@@ -51,17 +54,6 @@ def record():
         # Increment buffer index
         buffer_idx = (buffer_idx + 1) % BUFFER_SIZE
 
-        # Display frame
-        cv2.imshow('Dashcam', frame)
-        frame_count += 1
-
-        # Wait for key press to exit
-        if cv2.waitKey(1) == ord('q') or not is_recording:
-            is_recording = False
-            break
-
-    print(f"Received Frames {frame_count}")
-
 
 def exit_captures():
     capture.release()
@@ -69,38 +61,39 @@ def exit_captures():
 
 
 def diagnostic():
-    # start_time = time.time()
+    print("Recording for 2 minutes to save a test file")
     # Recording
-    recordThread = threading.Thread(target=record)
-    recordThread.start()
-    # time.sleep(4)
-    # is_recording = False
+    thread = threading.Thread(target=record)
+    thread.start()
 
-    # # get stats
-    # time_taken = time.time() - start_time
-    # size_taken_MB = sys.getsizeof(frame_buffer) / 1024
-    #
-    # print(f"FPS:{int(len(frame_buffer) / time_taken)}")
-    # print(f"Recorded Frames: {len(frame_buffer)}")
-    # print(f"Space taken by buffer:{size_taken_MB} kB")
-    # print(f"Time taken : {time_taken} seconds")
-    # size_per_second = size_taken_MB / time_taken
-    # size_per_hour = size_per_second * 3600
-    # print(f"Est size of 1 hour video: {size_per_hour} kB")
+    for i in tqdm(range(2*60)):
+        time.sleep(1)
 
-    # Show all frames in buffer
+    stop_recording = True
+    print("done")
+
+    # # display all the frames in buffer
+    # for frame in frame_buffer:
+    #     cv2.imshow("Frames in buffer", frame)
+    #     if cv2.waitKey(int(1000/FRAME_RATE))
 
     # initialize writer
-    out = cv2.VideoWriter('outpy.avi', cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'), FRAME_RATE, FRAME_SIZE)
+    out = cv2.VideoWriter('TestVideo.avi', cv2.VideoWriter_fourcc(*'XVID'), FRAME_RATE, FRAME_SIZE)
 
+    print('Saving test video')
     last_1_minutes = helpers.get_last_X_minutes(frame_buffer, 1, FRAME_RATE)
     for i in tqdm(range(len(last_1_minutes))):
         out.write(frame_buffer[i])
-        cv2.waitKey(int(1000/FRAME_RATE))
+        cv2.waitKey(int(1000 / FRAME_RATE))
 
     # Closing all windows
     exit_captures()
 
 
 if __name__ == '__main__':
-    diagnostic()
+
+    thread = threading.Thread(target=record)
+    thread.start()
+
+    input("Click enter to stop")
+    stop_recording = True
